@@ -7,27 +7,38 @@ from datetime import timedelta
 import re
 import time
 
-from aioesphomeapi import BluetoothLEAdvertisement
+from aioesphomeapi import APIClient, BluetoothLEAdvertisement
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
 
-from homeassistant.components.bluetooth import BaseHaScanner, HaBluetoothConnector
+from homeassistant.components.bluetooth import (
+    BaseHaScanner,
+    async_get_advertisement_callback,
+    async_register_scanner,
+)
 from homeassistant.components.bluetooth.models import BluetoothServiceInfoBleak
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_time_interval
 
-# We have to set this quite high as we don't know
-# when devices fall out of the esphome device's stack
-# like we do with BlueZ so its safer to assume its available
-# since if it does go out of range and it is in range
-# of another device the timeout is much shorter and it will
-# switch over to using that adapter anyways.
-ADV_STALE_TIME = 60 * 15  # seconds
+ADV_STALE_TIME = 180  # seconds
 
 TWO_CHAR = re.compile("..")
 
 
-class ESPHomeScanner(BaseHaScanner):
+async def async_connect_scanner(
+    hass: HomeAssistant, entry: ConfigEntry, cli: APIClient
+) -> None:
+    """Connect scanner."""
+    assert entry.unique_id is not None
+    new_info_callback = async_get_advertisement_callback(hass)
+    scanner = ESPHomeScannner(hass, entry.unique_id, new_info_callback)
+    entry.async_on_unload(async_register_scanner(hass, scanner, False))
+    entry.async_on_unload(scanner.async_setup())
+    await cli.subscribe_bluetooth_le_advertisements(scanner.async_on_advertisement)
+
+
+class ESPHomeScannner(BaseHaScanner):
     """Scanner for esphome."""
 
     def __init__(
@@ -35,8 +46,6 @@ class ESPHomeScanner(BaseHaScanner):
         hass: HomeAssistant,
         scanner_id: str,
         new_info_callback: Callable[[BluetoothServiceInfoBleak], None],
-        connector: HaBluetoothConnector,
-        connectable: bool,
     ) -> None:
         """Initialize the scanner."""
         self._hass = hass
@@ -44,11 +53,6 @@ class ESPHomeScanner(BaseHaScanner):
         self._discovered_devices: dict[str, BLEDevice] = {}
         self._discovered_device_timestamps: dict[str, float] = {}
         self._source = scanner_id
-        self._connector = connector
-        self._connectable = connectable
-        self._details: dict[str, str | HaBluetoothConnector] = {"source": scanner_id}
-        if connectable:
-            self._details["connector"] = connector
 
     @callback
     def async_setup(self) -> CALLBACK_TYPE:
@@ -99,8 +103,13 @@ class ESPHomeScanner(BaseHaScanner):
         )
         device = BLEDevice(  # type: ignore[no-untyped-call]
             address=address,
+<<<<<<< HEAD:homeassistant/components/esphome/bluetooth/scanner.py
             name=name,
             details=self._details,
+=======
+            name=adv.name,
+            details={},
+>>>>>>> parent of 7042d6d35b (Add ESPHome BleakClient (#78911)):homeassistant/components/esphome/bluetooth.py
             rssi=adv.rssi,
         )
         self._discovered_devices[address] = device
@@ -116,7 +125,7 @@ class ESPHomeScanner(BaseHaScanner):
                 source=self._source,
                 device=device,
                 advertisement=advertisement_data,
-                connectable=self._connectable,
+                connectable=False,
                 time=now,
             )
         )
