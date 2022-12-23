@@ -16,7 +16,7 @@ cryptography==38.0.3
 fnvhash==0.1.0
 hass-nabucasa==0.61.0
 home-assistant-bluetooth==1.8.1
-home-assistant-frontend==20221213.0
+home-assistant-frontend==20221213.1
 httpx==0.23.1
 ifaddr==0.1.7
 janus==1.0.0
