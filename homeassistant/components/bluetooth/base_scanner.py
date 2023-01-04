@@ -44,7 +44,6 @@ class BaseHaScanner(ABC):
 
     __slots__ = (
         "hass",
-        "adapter",
         "connectable",
         "source",
         "connector",
@@ -69,7 +68,6 @@ class BaseHaScanner(ABC):
         self.source = source
         self.connector = connector
         self._connecting = 0
-        self.adapter = adapter
         self.name = adapter_human_name(adapter, source) if adapter != source else source
         self.scanning = True
         self._last_detection = 0.0
