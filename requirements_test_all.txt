@@ -352,7 +352,7 @@ bellows==0.34.6
 bimmer_connected==0.12.0
 
 # homeassistant.components.bluetooth
-bleak-retry-connector==2.12.1
+bleak-retry-connector==2.10.2
 
 # homeassistant.components.bluetooth
 bleak==0.19.2
@@ -367,7 +367,7 @@ blinkpy==0.19.2
 bluemaestro-ble==0.2.0
 
 # homeassistant.components.bluetooth
-bluetooth-adapters==0.15.2
+bluetooth-adapters==0.14.1
 
 # homeassistant.components.bluetooth
 bluetooth-auto-recovery==1.0.3
