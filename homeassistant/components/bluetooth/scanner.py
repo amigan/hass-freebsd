@@ -132,6 +132,7 @@ class HaScanner(BaseHaScanner):
         super().__init__(hass, source, adapter)
         self.connectable = True
         self.mode = mode
+        self.adapter = adapter
         self._start_stop_lock = asyncio.Lock()
         self._new_info_callback = new_info_callback
         self.scanning = False
