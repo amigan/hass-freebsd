@@ -86,7 +86,6 @@ async def test_diagnostics(
                     "product": "Bluetooth Adapter 5.0",
                     "product_id": "aa01",
                     "vendor_id": "cc01",
-                    "connection_slots": 1,
                 },
                 "hci1": {
                     "address": "00:00:00:00:00:02",
@@ -97,7 +96,6 @@ async def test_diagnostics(
                     "product": "Bluetooth Adapter 5.0",
                     "product_id": "aa01",
                     "vendor_id": "cc01",
-                    "connection_slots": 2,
                 },
             },
             "dbus": {
@@ -117,11 +115,6 @@ async def test_diagnostics(
                 }
             },
             "manager": {
-                "slot_manager": {
-                    "adapter_slots": {"hci0": 5, "hci1": 2},
-                    "allocations_by_adapter": {"hci0": [], "hci1": []},
-                    "manager": False,
-                },
                 "adapters": {
                     "hci0": {
                         "address": "00:00:00:00:00:01",
@@ -132,7 +125,6 @@ async def test_diagnostics(
                         "product": "Bluetooth Adapter 5.0",
                         "product_id": "aa01",
                         "vendor_id": "cc01",
-                        "connection_slots": 1,
                     },
                     "hci1": {
                         "address": "00:00:00:00:00:02",
@@ -143,7 +135,6 @@ async def test_diagnostics(
                         "product": "Bluetooth Adapter 5.0",
                         "product_id": "aa01",
                         "vendor_id": "cc01",
-                        "connection_slots": 2,
                     },
                 },
                 "advertisement_tracker": {
@@ -283,7 +274,6 @@ async def test_diagnostics_macos(
         inject_advertisement(hass, switchbot_device, switchbot_adv)
 
         diag = await get_diagnostics_for_config_entry(hass, hass_client, entry1)
-
         assert diag == {
             "adapters": {
                 "Core Bluetooth": {
@@ -297,11 +287,6 @@ async def test_diagnostics_macos(
                 }
             },
             "manager": {
-                "slot_manager": {
-                    "adapter_slots": {"Core Bluetooth": 5},
-                    "allocations_by_adapter": {"Core Bluetooth": []},
-                    "manager": False,
-                },
                 "adapters": {
                     "Core Bluetooth": {
                         "address": "00:00:00:00:00:00",
@@ -472,7 +457,6 @@ async def test_diagnostics_remote_adapter(
         inject_advertisement(hass, switchbot_device, switchbot_adv)
 
         diag = await get_diagnostics_for_config_entry(hass, hass_client, entry1)
-
         assert diag == {
             "adapters": {
                 "hci0": {
@@ -488,11 +472,6 @@ async def test_diagnostics_remote_adapter(
             },
             "dbus": {},
             "manager": {
-                "slot_manager": {
-                    "adapter_slots": {"hci0": 5},
-                    "allocations_by_adapter": {"hci0": []},
-                    "manager": False,
-                },
                 "adapters": {
                     "hci0": {
                         "address": "00:00:00:00:00:01",
