@@ -12,7 +12,16 @@ from bleak import BleakClient, BleakError
 from bleak.backends.client import BaseBleakClient, get_platform_client_backend_type
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementDataCallback, BaseBleakScanner
+<<<<<<< HEAD
 from bleak_retry_connector import NO_RSSI_VALUE, ble_device_description, clear_cache
+=======
+from bleak_retry_connector import (
+    NO_RSSI_VALUE,
+    ble_device_description,
+    clear_cache,
+    device_source,
+)
+>>>>>>> 32b2dd7f83 (Revert "Try the next best adapter after a BLE connection fails (#84512)")
 
 from homeassistant.core import CALLBACK_TYPE, callback as hass_callback
 from homeassistant.helpers.frame import report
