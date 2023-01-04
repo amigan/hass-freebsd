@@ -12,12 +12,7 @@ from bleak import BleakClient, BleakError
 from bleak.backends.client import BaseBleakClient, get_platform_client_backend_type
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementDataCallback, BaseBleakScanner
-from bleak_retry_connector import (
-    NO_RSSI_VALUE,
-    ble_device_description,
-    clear_cache,
-    device_source,
-)
+from bleak_retry_connector import NO_RSSI_VALUE, ble_device_description, clear_cache
 
 from homeassistant.core import CALLBACK_TYPE, callback as hass_callback
 from homeassistant.helpers.frame import report
@@ -38,7 +33,6 @@ class _HaWrappedBleakBackend:
 
     device: BLEDevice
     client: type[BaseBleakClient]
-    source: str | None
 
 
 class HaBleakScannerWrapper(BaseBleakScanner):
@@ -209,15 +203,7 @@ class HaBleakClientWrapper(BleakClient):
             description = ble_device_description(wrapped_backend.device)
             rssi = wrapped_backend.device.rssi
             _LOGGER.debug("%s: Connecting (last rssi: %s)", description, rssi)
-        connected = None
-        try:
-            connected = await super().connect(**kwargs)
-        finally:
-            # If we failed to connect and its a local adapter (no source)
-            # we release the connection slot
-            if not connected and not wrapped_backend.source:
-                models.MANAGER.async_release_connection_slot(wrapped_backend.device)
-
+        connected = await super().connect(**kwargs)
         if debug_logging:
             _LOGGER.debug("%s: Connected (last rssi: %s)", description, rssi)
         return connected
@@ -227,14 +213,14 @@ class HaBleakClientWrapper(BleakClient):
         self, manager: BluetoothManager, ble_device: BLEDevice
     ) -> _HaWrappedBleakBackend | None:
         """Get the backend for a BLEDevice."""
-        if not (source := device_source(ble_device)):
+        details = ble_device.details
+        if not isinstance(details, dict) or "source" not in details:
             # If client is not defined in details
             # its the client for this platform
-            if not manager.async_allocate_connection_slot(ble_device):
-                return None
             cls = get_platform_client_backend_type()
-            return _HaWrappedBleakBackend(ble_device, cls, source)
+            return _HaWrappedBleakBackend(ble_device, cls)
 
+        source: str = details["source"]
         # Make sure the backend can connect to the device
         # as some backends have connection limits
         if (
@@ -244,7 +230,7 @@ class HaBleakClientWrapper(BleakClient):
         ):
             return None
 
-        return _HaWrappedBleakBackend(ble_device, scanner.connector.client, source)
+        return _HaWrappedBleakBackend(ble_device, scanner.connector.client)
 
     @hass_callback
     def _async_get_best_available_backend_and_device(
