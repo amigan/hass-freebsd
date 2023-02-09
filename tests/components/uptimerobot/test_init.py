@@ -38,7 +38,6 @@ async def test_reauthentication_trigger_in_setup(
         "pyuptimerobot.UptimeRobot.async_get_monitors",
         side_effect=UptimeRobotAuthenticationException,
     ):
-
         await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
@@ -107,7 +106,6 @@ async def test_reauthentication_trigger_after_setup(
         "pyuptimerobot.UptimeRobot.async_get_monitors",
         side_effect=UptimeRobotAuthenticationException,
     ):
-
         async_fire_time_changed(hass, dt.utcnow() + COORDINATOR_UPDATE_INTERVAL)
         await hass.async_block_till_done()
 
@@ -219,6 +217,7 @@ async def test_device_management(hass: HomeAssistant):
         return_value=mock_uptimerobot_api_response(),
     ):
         async_fire_time_changed(hass, dt.utcnow() + COORDINATOR_UPDATE_INTERVAL)
+        await hass.async_block_till_done()
         await hass.async_block_till_done()
 
     devices = dr.async_entries_for_config_entry(dev_reg, mock_entry.entry_id)

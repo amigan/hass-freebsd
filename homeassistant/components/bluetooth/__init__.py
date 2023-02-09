@@ -55,9 +55,10 @@ from .api import (
     async_register_scanner,
     async_scanner_by_source,
     async_scanner_count,
+    async_scanner_devices_by_address,
     async_track_unavailable,
 )
-from .base_scanner import BaseHaRemoteScanner, BaseHaScanner
+from .base_scanner import BaseHaRemoteScanner, BaseHaScanner, BluetoothScannerDevice
 from .const import (
     BLUETOOTH_DISCOVERY_COOLDOWN_SECONDS,
     CONF_ADAPTER,
@@ -96,6 +97,7 @@ __all__ = [
     "async_track_unavailable",
     "async_scanner_by_source",
     "async_scanner_count",
+    "async_scanner_devices_by_address",
     "BaseHaScanner",
     "BaseHaRemoteScanner",
     "BluetoothCallbackMatcher",
@@ -104,6 +106,7 @@ __all__ = [
     "BluetoothServiceInfoBleak",
     "BluetoothScanningMode",
     "BluetoothCallback",
+    "BluetoothScannerDevice",
     "HaBluetoothConnector",
     "SOURCE_LOCAL",
     "FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS",

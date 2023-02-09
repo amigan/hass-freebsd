@@ -6,6 +6,7 @@
     "application_credentials",
     "automation",
     "cloud",
+    "conversation",
     "counter",
     "dhcp",
     "energy",

@@ -38,7 +38,6 @@ from .const import (
     DEV_PROFILE_RGB,
     DEV_PROFILE_RGBW,
     DOMAIN,
-    HIDDEN_DEV_VALUES,
     MIN_EFFECT_VERSION,
 )
 
@@ -197,7 +196,6 @@ class TwinklyLight(LightEntity):
             ATTR_RGBW_COLOR in kwargs
             and kwargs[ATTR_RGBW_COLOR] != self._attr_rgbw_color
         ):
-
             await self._client.interview()
             if LightEntityFeature.EFFECT & self.supported_features:
                 # Static color only supports rgb
@@ -224,7 +222,6 @@ class TwinklyLight(LightEntity):
             self._attr_rgbw_color = kwargs[ATTR_RGBW_COLOR]
 
         if ATTR_RGB_COLOR in kwargs and kwargs[ATTR_RGB_COLOR] != self._attr_rgb_color:
-
             await self._client.interview()
             if LightEntityFeature.EFFECT & self.supported_features:
                 await self._client.set_static_colour(kwargs[ATTR_RGB_COLOR])
@@ -296,10 +293,6 @@ class TwinklyLight(LightEntity):
                         CONF_MODEL: self._model,
                     },
                 )
-
-            for key, value in device_info.items():
-                if key not in HIDDEN_DEV_VALUES:
-                    self._attributes[key] = value
 
             if LightEntityFeature.EFFECT & self.supported_features:
                 await self.async_update_movies()
