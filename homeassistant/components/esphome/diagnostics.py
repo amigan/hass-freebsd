@@ -30,15 +30,6 @@ async def async_get_config_entry_diagnostics(
         storage_data = cast("dict[str, Any]", storage_data)
         diag["storage_data"] = storage_data
 
-    if config_entry.unique_id and (
-        scanner := async_scanner_by_source(hass, config_entry.unique_id)
-    ):
-        diag["bluetooth"] = {
-            "connections_free": entry_data.ble_connections_free,
-            "connections_limit": entry_data.ble_connections_limit,
-            "scanner": await scanner.async_diagnostics(),
-        }
-
     if dashboard := async_get_dashboard(hass):
         diag["dashboard"] = dashboard.addon_slug
 
