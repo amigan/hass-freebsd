@@ -9,7 +9,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Final
 
 from bleak.backends.scanner import AdvertisementDataCallback
-from bleak_retry_connector import NO_RSSI_VALUE, RSSI_SWITCH_THRESHOLD
+from bleak_retry_connector import NO_RSSI_VALUE, RSSI_SWITCH_THRESHOLD, BleakSlotManager
 from bluetooth_adapters import (
     ADAPTER_ADDRESS,
     ADAPTER_PASSIVE_SCAN,
@@ -107,6 +107,7 @@ class BluetoothManager:
         integration_matcher: IntegrationMatcher,
         bluetooth_adapters: BluetoothAdapters,
         storage: BluetoothStorage,
+        slot_manager: BleakSlotManager,
     ) -> None:
         """Init bluetooth manager."""
         self.hass = hass
@@ -134,6 +135,7 @@ class BluetoothManager:
         self._sources: dict[str, BaseHaScanner] = {}
         self._bluetooth_adapters = bluetooth_adapters
         self.storage = storage
+        self.slot_manager = slot_manager
 
     @property
     def supports_passive_scan(self) -> bool:
@@ -158,6 +160,7 @@ class BluetoothManager:
         )
         return {
             "adapters": self._adapters,
+            "slot_manager": self.slot_manager.diagnostics(),
             "scanners": scanner_diagnostics,
             "connectable_history": [
                 service_info.as_dict()
@@ -672,7 +675,10 @@ class BluetoothManager:
         return self._connectable_history if connectable else self._all_history
 
     def async_register_scanner(
-        self, scanner: BaseHaScanner, connectable: bool
+        self,
+        scanner: BaseHaScanner,
+        connectable: bool,
+        connection_slots: int | None = None,
     ) -> CALLBACK_TYPE:
         """Register a new scanner."""
         _LOGGER.debug("Registering scanner %s", scanner.name)
@@ -683,9 +689,13 @@ class BluetoothManager:
             self._advertisement_tracker.async_remove_source(scanner.source)
             scanners.remove(scanner)
             del self._sources[scanner.source]
+            if connection_slots:
+                self.slot_manager.remove_adapter(scanner.adapter)
 
         scanners.append(scanner)
         self._sources[scanner.source] = scanner
+        if connection_slots:
+            self.slot_manager.register_adapter(scanner.adapter, connection_slots)
         return _unregister_scanner
 
     @hass_callback
@@ -709,3 +719,13 @@ class BluetoothManager:
             )
 
         return _remove_callback
+
+    @hass_callback
+    def async_release_connection_slot(self, device: BLEDevice) -> None:
+        """Release a connection slot."""
+        self.slot_manager.release_slot(device)
+
+    @hass_callback
+    def async_allocate_connection_slot(self, device: BLEDevice) -> bool:
+        """Allocate a connection slot."""
+        return self.slot_manager.allocate_slot(device)

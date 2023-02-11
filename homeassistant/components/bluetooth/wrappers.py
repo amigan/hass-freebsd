@@ -5,6 +5,7 @@ import asyncio
 from collections.abc import Callable
 import contextlib
 from dataclasses import dataclass
+from functools import partial
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
@@ -38,7 +39,9 @@ class _HaWrappedBleakBackend:
     """Wrap bleak backend to make it usable by Home Assistant."""
 
     device: BLEDevice
+    scanner: BaseHaScanner
     client: type[BaseBleakClient]
+    source: str | None
 
 
 class HaBleakScannerWrapper(BaseBleakScanner):
@@ -198,6 +201,7 @@ class HaBleakClientWrapper(BleakClient):
             self.__address = address_or_ble_device
         self.__disconnected_callback = disconnected_callback
         self.__timeout = timeout
+        self.__connect_failures: dict[BaseHaScanner, int] = {}
         self._backend: BaseBleakClient | None = None  # type: ignore[assignment]
 
     @property
@@ -227,57 +231,67 @@ class HaBleakClientWrapper(BleakClient):
     async def connect(self, **kwargs: Any) -> bool:
         """Connect to the specified GATT server."""
         assert models.MANAGER is not None
-        wrapped_backend = self._async_get_best_available_backend_and_device()
+        manager = models.MANAGER
+        wrapped_backend = self._async_get_best_available_backend_and_device(manager)
         self._backend = wrapped_backend.client(
             wrapped_backend.device,
             disconnected_callback=self.__disconnected_callback,
             timeout=self.__timeout,
-            hass=models.MANAGER.hass,
+            hass=manager.hass,
         )
         if debug_logging := _LOGGER.isEnabledFor(logging.DEBUG):
             # Only lookup the description if we are going to log it
             description = ble_device_description(wrapped_backend.device)
             rssi = wrapped_backend.device.rssi
             _LOGGER.debug("%s: Connecting (last rssi: %s)", description, rssi)
-        connected = await super().connect(**kwargs)
+        connected = None
+        try:
+            connected = await super().connect(**kwargs)
+        finally:
+            # If we failed to connect and its a local adapter (no source)
+            # we release the connection slot
+            if not connected:
+                self.__connect_failures[wrapped_backend.scanner] = (
+                    self.__connect_failures.get(wrapped_backend.scanner, 0) + 1
+                )
+                if not wrapped_backend.source:
+                    manager.async_release_connection_slot(wrapped_backend.device)
+
         if debug_logging:
             _LOGGER.debug("%s: Connected (last rssi: %s)", description, rssi)
         return connected
 
     @hass_callback
     def _async_get_backend_for_ble_device(
-        self, manager: BluetoothManager, ble_device: BLEDevice
+        self, manager: BluetoothManager, scanner: BaseHaScanner, ble_device: BLEDevice
     ) -> _HaWrappedBleakBackend | None:
         """Get the backend for a BLEDevice."""
-        details = ble_device.details
-        if not isinstance(details, dict) or "source" not in details:
+        if not (source := device_source(ble_device)):
             # If client is not defined in details
             # its the client for this platform
+            if not manager.async_allocate_connection_slot(ble_device):
+                return None
             cls = get_platform_client_backend_type()
-            return _HaWrappedBleakBackend(ble_device, cls)
+            return _HaWrappedBleakBackend(ble_device, scanner, cls, source)
 
-        source: str = details["source"]
         # Make sure the backend can connect to the device
         # as some backends have connection limits
-        if (
-            not (scanner := manager.async_scanner_by_source(source))
-            or not scanner.connector
-            or not scanner.connector.can_connect()
-        ):
+        if not scanner.connector or not scanner.connector.can_connect():
             return None
 
-        return _HaWrappedBleakBackend(ble_device, scanner.connector.client)
+        return _HaWrappedBleakBackend(
+            ble_device, scanner, scanner.connector.client, source
+        )
 
     @hass_callback
     def _async_get_best_available_backend_and_device(
-        self,
+        self, manager: BluetoothManager
     ) -> _HaWrappedBleakBackend:
         """Get a best available backend and device for the given address.
 
         This method will return the backend with the best rssi
         that has a free connection slot.
         """
-        assert models.MANAGER is not None
         address = self.__address
         devices = manager.async_scanner_devices_by_address(self.__address, True)
         sorted_devices = sorted(
