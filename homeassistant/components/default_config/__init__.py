@@ -10,4 +10,7 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Initialize default configuration."""
+    if sys.platform.startswith(("linux", "win32", "darwin")):
+        await async_setup_component(hass, "bluetooth", config)
+
     return True
