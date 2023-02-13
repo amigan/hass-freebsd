@@ -15,4 +15,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if not is_hassio(hass):
         await async_setup_component(hass, "backup", config)
 
+    if sys.platform.startswith(("linux", "win32", "darwin")):
+        await async_setup_component(hass, "bluetooth", config)
+
     return True
