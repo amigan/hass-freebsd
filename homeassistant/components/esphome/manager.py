@@ -47,7 +47,6 @@ from homeassistant.helpers.service import async_set_service_schema
 from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import EventType
 
-from .bluetooth import async_connect_scanner
 from .const import (
     CONF_ALLOW_SERVICE_CALLS,
     CONF_DEVICE_NAME,
@@ -76,10 +75,9 @@ def _async_check_firmware_version(
     # ESPHome device_info.mac_address is the unique_id
     issue = f"ble_firmware_outdated-{device_info.mac_address}"
     if (
-        not device_info.bluetooth_proxy_feature_flags_compat(api_version)
         # If the device has a project name its up to that project
         # to tell them about the firmware version update so we don't notify here
-        or (device_info.project_name and device_info.project_name not in PROJECT_URLS)
+        (device_info.project_name and device_info.project_name not in PROJECT_URLS)
         or AwesomeVersion(device_info.esphome_version) >= STABLE_BLE_VERSION
     ):
         async_delete_issue(hass, DOMAIN, issue)
@@ -393,13 +391,6 @@ class ESPHomeManager:
             if entry_data.device_info.name:
                 assert reconnect_logic is not None, "Reconnect logic must be set"
                 reconnect_logic.name = entry_data.device_info.name
-
-            if device_info.bluetooth_proxy_feature_flags_compat(cli.api_version):
-                entry_data.disconnect_callbacks.append(
-                    await async_connect_scanner(
-                        hass, entry, cli, entry_data, self.domain_data.bluetooth_cache
-                    )
-                )
 
             self.device_id = _async_setup_device_registry(hass, entry, entry_data)
             entry_data.async_update_device_state(hass)
