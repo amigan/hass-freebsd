@@ -48,13 +48,13 @@ from homeassistant.helpers.service import async_set_service_schema
 from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import ConfigType
 
-from .bluetooth import async_connect_scanner
 from .const import (
     CONF_ALLOW_SERVICE_CALLS,
     DEFAULT_ALLOW_SERVICE_CALLS,
     DOMAIN,
 )
 from .dashboard import async_get_dashboard, async_setup as async_setup_dashboard
+from .const import DOMAIN
 from .domain_data import DomainData
 
 # Import config flow so that it's added to the registry
@@ -391,11 +391,6 @@ async def async_setup_entry(  # noqa: C901
             entry_data.expected_disconnect = True
             if entry_data.device_info.name:
                 reconnect_logic.name = entry_data.device_info.name
-
-            if device_info.bluetooth_proxy_feature_flags_compat(cli.api_version):
-                entry_data.disconnect_callbacks.append(
-                    await async_connect_scanner(hass, entry, cli, entry_data)
-                )
 
             device_id = _async_setup_device_registry(
                 hass, entry, entry_data.device_info
