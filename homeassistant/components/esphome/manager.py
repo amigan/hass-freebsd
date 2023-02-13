@@ -44,7 +44,6 @@ from homeassistant.helpers.service import async_set_service_schema
 from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import EventType
 
-from .bluetooth import async_connect_scanner
 from .const import (
     CONF_ALLOW_SERVICE_CALLS,
     CONF_DEVICE_NAME,
@@ -73,10 +72,9 @@ def _async_check_firmware_version(
     # ESPHome device_info.mac_address is the unique_id
     issue = f"ble_firmware_outdated-{device_info.mac_address}"
     if (
-        not device_info.bluetooth_proxy_feature_flags_compat(api_version)
         # If the device has a project name its up to that project
         # to tell them about the firmware version update so we don't notify here
-        or (device_info.project_name and device_info.project_name not in PROJECT_URLS)
+        (device_info.project_name and device_info.project_name not in PROJECT_URLS)
         or AwesomeVersion(device_info.esphome_version) >= STABLE_BLE_VERSION
     ):
         async_delete_issue(hass, DOMAIN, issue)
@@ -445,8 +443,29 @@ class ESPHomeManager:
                 )
             )
 
-        self.device_id = _async_setup_device_registry(hass, entry, entry_data)
-        entry_data.async_update_device_state(hass)
+            # Make sure we have the correct device name stored
+            # so we can map the device to ESPHome Dashboard config
+            if entry.data.get(CONF_DEVICE_NAME) != device_info.name:
+                hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, CONF_DEVICE_NAME: device_info.name}
+                )
+
+            entry_data.device_info = device_info
+            assert cli.api_version is not None
+            entry_data.api_version = cli.api_version
+            entry_data.available = True
+            # Reset expected disconnect flag on successful reconnect
+            # as it will be flipped to False on unexpected disconnect.
+            #
+            # We use this to determine if a deep sleep device should
+            # be marked as unavailable or not.
+            entry_data.expected_disconnect = True
+            if entry_data.device_info.name:
+                assert reconnect_logic is not None, "Reconnect logic must be set"
+                reconnect_logic.name = entry_data.device_info.name
+
+            self.device_id = _async_setup_device_registry(hass, entry, entry_data)
+            entry_data.async_update_device_state(hass)
 
         try:
             entity_infos, services = await cli.list_entities_services()
