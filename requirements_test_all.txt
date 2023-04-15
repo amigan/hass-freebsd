@@ -177,7 +177,7 @@ aioimaplib==1.0.1
 aiokafka==0.7.2
 
 # homeassistant.components.lifx
-aiolifx==0.8.9
+aiolifx==0.8.10
 
 # homeassistant.components.lifx
 aiolifx_effects==0.3.2
@@ -227,7 +227,7 @@ aiopvpc==4.1.0
 # homeassistant.components.lidarr
 # homeassistant.components.radarr
 # homeassistant.components.sonarr
-aiopyarr==22.11.0
+aiopyarr==23.4.0
 
 # homeassistant.components.qnap_qsw
 aioqsw==0.3.2
@@ -355,7 +355,7 @@ base36==0.1.1
 beautifulsoup4==4.11.1
 
 # homeassistant.components.zha
-bellows==0.35.0
+bellows==0.35.1
 
 # homeassistant.components.bmw_connected_drive
 bimmer_connected==0.13.0
@@ -517,7 +517,7 @@ energyzero==0.4.1
 enocean==0.50
 
 # homeassistant.components.environment_canada
-env_canada==0.5.31
+env_canada==0.5.32
 
 # homeassistant.components.enphase_envoy
 envoy_reader==0.20.1
@@ -693,7 +693,7 @@ hole==0.8.0
 holidays==0.21.13
 
 # homeassistant.components.frontend
-home-assistant-frontend==20230406.1
+home-assistant-frontend==20230411.1
 
 # homeassistant.components.conversation
 home-assistant-intents==2023.3.29
@@ -1477,7 +1477,7 @@ python-ecobee-api==0.2.14
 python-fullykiosk==0.0.12
 
 # homeassistant.components.homewizard
-python-homewizard-energy==1.8.0
+python-homewizard-energy==2.0.1
 
 # homeassistant.components.izone
 python-izone==1.2.9
@@ -1520,7 +1520,7 @@ python-telegram-bot==13.1
 python_awair==0.2.4
 
 # homeassistant.components.tile
-pytile==2022.02.0
+pytile==2023.04.0
 
 # homeassistant.components.tomorrowio
 pytomorrowio==0.3.5
@@ -1932,7 +1932,7 @@ zeroconf==0.56.0
 zeversolar==0.3.1
 
 # homeassistant.components.zha
-zha-quirks==0.0.96
+zha-quirks==0.0.97
 
 # homeassistant.components.zha
 zigpy-deconz==0.20.0
@@ -1947,7 +1947,7 @@ zigpy-zigate==0.10.3
 zigpy-znp==0.10.0
 
 # homeassistant.components.zha
-zigpy==0.54.0
+zigpy==0.54.1
 
 # homeassistant.components.zwave_js
 zwave-js-server-python==0.47.3
