@@ -11,15 +11,9 @@ atomicwrites-homeassistant==1.4.1
 attrs==22.2.0
 awesomeversion==22.9.0
 bcrypt==4.0.1
-bleak-retry-connector==3.0.2
-bleak==0.20.2
-bluetooth-adapters==0.15.3
-bluetooth-auto-recovery==1.1.1
-bluetooth-data-tools==0.4.0
 certifi>=2021.5.30
 ciso8601==2.3.0
 cryptography==40.0.2
-dbus-fast==1.85.0
 fnv-hash-fast==0.3.1
 ha-av==10.0.0
 hass-nabucasa==0.66.2
