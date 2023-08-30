@@ -49,7 +49,7 @@ async def async_setup_platform(
     hub = get_hub(hass, discovery_info[CONF_NAME])
     for entry in discovery_info[CONF_SENSORS]:
         slave_count = entry.get(CONF_SLAVE_COUNT, 0)
-        sensor = ModbusRegisterSensor(hub, entry)
+        sensor = ModbusRegisterSensor(hub, entry, slave_count)
         if slave_count > 0:
             sensors.extend(await sensor.async_setup_slaves(hass, slave_count, entry))
         sensors.append(sensor)
@@ -63,9 +63,12 @@ class ModbusRegisterSensor(BaseStructPlatform, RestoreSensor, SensorEntity):
         self,
         hub: ModbusHub,
         entry: dict[str, Any],
+        slave_count: int,
     ) -> None:
         """Initialize the modbus register sensor."""
         super().__init__(hub, entry)
+        if slave_count:
+            self._count = self._count * (slave_count + 1)
         self._coordinator: DataUpdateCoordinator[list[int] | None] | None = None
         self._attr_native_unit_of_measurement = entry.get(CONF_UNIT_OF_MEASUREMENT)
         self._attr_state_class = entry.get(CONF_STATE_CLASS)
@@ -129,10 +132,7 @@ class ModbusRegisterSensor(BaseStructPlatform, RestoreSensor, SensorEntity):
                 self._coordinator.async_set_updated_data(None)
         else:
             self._attr_native_value = result
-        if self._attr_native_value is None:
-            self._attr_available = False
-        else:
-            self._attr_available = True
+        self._attr_available = self._attr_native_value is not None
         self._lazy_errors = self._lazy_error_count
         self.async_write_ha_state()
 
