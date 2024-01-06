@@ -21,7 +21,7 @@ ha-ffmpeg==3.1.0
 hass-nabucasa==0.75.1
 hassil==1.5.1
 home-assistant-bluetooth==1.11.0
-home-assistant-frontend==20240103.3
+home-assistant-frontend==20240104.0
 home-assistant-intents==2024.1.2
 httpx==0.26.0
 ifaddr==0.2.0
