@@ -11,6 +11,7 @@ from collections.abc import Callable, Iterable
 from contextlib import suppress
 from dataclasses import dataclass
 import functools as ft
+from functools import cached_property
 import importlib
 import logging
 import os
@@ -41,15 +42,11 @@ from .generated.zeroconf import HOMEKIT, ZEROCONF
 from .util.json import JSON_DECODE_EXCEPTIONS, json_loads
 
 if TYPE_CHECKING:
-    from functools import cached_property
-
     # The relative imports below are guarded by TYPE_CHECKING
     # because they would cause a circular import otherwise.
     from .config_entries import ConfigEntry
     from .helpers import device_registry as dr
     from .helpers.typing import ConfigType
-else:
-    from .backports.functools import cached_property
 
 _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
 
@@ -93,7 +90,12 @@ class BlockedIntegration:
 
 BLOCKED_CUSTOM_INTEGRATIONS: dict[str, BlockedIntegration] = {
     # Added in 2024.3.0 because of https://github.com/home-assistant/core/issues/112464
-    "start_time": BlockedIntegration(AwesomeVersion("1.1.7"), "breaks Home Assistant")
+    "start_time": BlockedIntegration(AwesomeVersion("1.1.7"), "breaks Home Assistant"),
+    # Added in 2024.5.1 because of
+    # https://community.home-assistant.io/t/psa-2024-5-upgrade-failure-and-dreame-vacuum-custom-integration/724612
+    "dreame_vacuum": BlockedIntegration(
+        AwesomeVersion("1.0.4"), "crashes Home Assistant"
+    ),
 }
 
 DATA_COMPONENTS = "components"
@@ -979,6 +981,8 @@ class Integration:
                 comp = await self.hass.async_add_import_executor_job(
                     self._get_component, True
                 )
+            except ModuleNotFoundError:
+                raise
             except ImportError as ex:
                 load_executor = False
                 _LOGGER.debug(
@@ -1118,6 +1122,8 @@ class Integration:
                                 self._load_platforms, platform_names
                             )
                         )
+                    except ModuleNotFoundError:
+                        raise
                     except ImportError as ex:
                         _LOGGER.debug(
                             "Failed to import %s platforms %s in executor",
@@ -1549,6 +1555,20 @@ class Helpers:
     def __getattr__(self, helper_name: str) -> ModuleWrapper:
         """Fetch a helper."""
         helper = importlib.import_module(f"homeassistant.helpers.{helper_name}")
+
+        # Local import to avoid circular dependencies
+        from .helpers.frame import report  # pylint: disable=import-outside-toplevel
+
+        report(
+            (
+                f"accesses hass.helpers.{helper_name}."
+                " This is deprecated and will stop working in Home Assistant 2024.11, it"
+                f" should be updated to import functions used from {helper_name} directly"
+            ),
+            error_if_core=False,
+            log_custom_component_only=True,
+        )
+
         wrapped = ModuleWrapper(self._hass, helper)
         setattr(self, helper_name, wrapped)
         return wrapped
