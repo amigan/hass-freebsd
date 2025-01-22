@@ -182,7 +182,6 @@ HUMIDIFIER_SCHEMA = BASIC_INFO_SCHEMA.extend(
     {vol.Optional(CONF_LINKED_HUMIDITY_SENSOR): cv.entity_domain(sensor.DOMAIN)}
 )
 
-
 COVER_SCHEMA = BASIC_INFO_SCHEMA.extend(
     {
         vol.Optional(CONF_LINKED_OBSTRUCTION_SENSOR): cv.entity_domain(
@@ -193,6 +192,14 @@ COVER_SCHEMA = BASIC_INFO_SCHEMA.extend(
 
 CODE_SCHEMA = BASIC_INFO_SCHEMA.extend(
     {vol.Optional(ATTR_CODE, default=None): vol.Any(None, cv.string)}
+)
+
+LOCK_SCHEMA = CODE_SCHEMA.extend(
+    {
+        vol.Optional(CONF_LINKED_DOORBELL_SENSOR): cv.entity_domain(
+            [binary_sensor.DOMAIN, EVENT_DOMAIN]
+        ),
+    }
 )
 
 MEDIA_PLAYER_SCHEMA = vol.Schema(
@@ -284,7 +291,7 @@ def validate_entity_config(values: dict) -> dict[str, dict]:
         if not isinstance(config, dict):
             raise vol.Invalid(f"The configuration for {entity} must be a dictionary.")
 
-        if domain in ("alarm_control_panel", "lock"):
+        if domain == "alarm_control_panel":
             config = CODE_SCHEMA(config)
 
         elif domain == media_player.const.DOMAIN:
@@ -300,6 +307,9 @@ def validate_entity_config(values: dict) -> dict[str, dict]:
 
         elif domain == "camera":
             config = CAMERA_SCHEMA(config)
+
+        elif domain == "lock":
+            config = LOCK_SCHEMA(config)
 
         elif domain == "switch":
             config = SWITCH_TYPE_SCHEMA(config)
@@ -645,3 +655,14 @@ def state_changed_event_is_same_state(event: Event[EventStateChangedData]) -> bo
     old_state = event_data["old_state"]
     new_state = event_data["new_state"]
     return bool(new_state and old_state and new_state.state == old_state.state)
+
+
+def get_min_max(value1: float, value2: float) -> tuple[float, float]:
+    """Return the minimum and maximum of two values.
+
+    HomeKit will go unavailable if the min and max are reversed
+    so we make sure the min is always the min and the max is always the max
+    as any mistakes made in integrations will cause the entire
+    bridge to go unavailable.
+    """
+    return min(value1, value2), max(value1, value2)
