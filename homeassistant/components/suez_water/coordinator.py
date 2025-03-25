@@ -20,8 +20,8 @@ class SuezWaterAggregatedAttributes:
 
     this_month_consumption: dict[str, float]
     previous_month_consumption: dict[str, float]
-    last_year_overall: dict[str, float]
-    this_year_overall: dict[str, float]
+    last_year_overall: int
+    this_year_overall: int
     history: dict[str, float]
     highest_monthly_consumption: float
 
@@ -85,9 +85,6 @@ class SuezWaterCoordinator(DataUpdateCoordinator[SuezWaterData]):
                 price=(await self._suez_client.get_price()).price,
             )
         except PySuezError as err:
-            _LOGGER.exception(err)
-            raise UpdateFailed(
-                f"Suez coordinator error communicating with API: {err}"
-            ) from err
+            raise UpdateFailed(f"Suez data update failed: {err}") from err
         _LOGGER.debug("Successfully fetched suez data")
         return data
