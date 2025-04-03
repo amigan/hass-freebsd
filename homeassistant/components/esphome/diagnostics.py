@@ -12,9 +12,7 @@ from . import CONF_NOISE_PSK
 from .dashboard import async_get_dashboard
 from .entry_data import ESPHomeConfigEntry
 
-CONF_MAC_ADDRESS = "mac_address"
-
-REDACT_KEYS = {CONF_NOISE_PSK, CONF_PASSWORD, CONF_MAC_ADDRESS}
+REDACT_KEYS = {CONF_NOISE_PSK, CONF_PASSWORD, "mac_address", "bluetooth_mac_address"}
 
 
 async def async_get_config_entry_diagnostics(
@@ -26,6 +24,7 @@ async def async_get_config_entry_diagnostics(
     diag["config"] = config_entry.as_dict()
 
     entry_data = config_entry.runtime_data
+    device_info = entry_data.device_info
 
     if (storage_data := await entry_data.store.async_load()) is not None:
         diag["storage_data"] = storage_data
