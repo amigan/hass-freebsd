@@ -13,7 +13,7 @@ from aioesphomeapi import (
     APIConnectionError,
     APIVersion,
     DeviceInfo as EsphomeDeviceInfo,
-    EncryptionHelloAPIError,
+    EncryptionPlaintextAPIError,
     EntityInfo,
     HomeassistantServiceCall,
     InvalidAuthAPIError,
@@ -569,7 +569,7 @@ class ESPHomeManager:
         if isinstance(
             err,
             (
-                EncryptionHelloAPIError,
+                EncryptionPlaintextAPIError,
                 RequiresEncryptionAPIError,
                 InvalidEncryptionKeyAPIError,
                 InvalidAuthAPIError,
