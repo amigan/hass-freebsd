@@ -3,14 +3,13 @@
 from abc import abstractmethod
 from typing import Any
 
-from propcache.api import cached_property
 from tesla_fleet_api.const import Scope
 from tesla_fleet_api.teslemetry import EnergySite, Vehicle
-from teslemetry_stream import Signal
 
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -20,7 +19,6 @@ from .coordinator import (
     TeslemetryEnergySiteLiveCoordinator,
     TeslemetryVehicleDataCoordinator,
 )
-from .helpers import wake_up_vehicle
 from .models import TeslemetryEnergyData, TeslemetryVehicleData
 
 
@@ -119,16 +117,18 @@ class TeslemetryVehicleEntity(TeslemetryEntity):
         self.vehicle = data
         self._attr_unique_id = f"{data.vin}-{key}"
         self._attr_device_info = data.device
+
+        if not data.poll:
+            # This entities data is not available for free
+            # so disable it by default
+            self._attr_entity_registry_enabled_default = False
+
         super().__init__(data.coordinator, key)
 
     @property
     def _value(self) -> Any | None:
         """Return a specific value from coordinator data."""
         return self.coordinator.data.get(self.key)
-
-    async def wake_up_if_asleep(self) -> None:
-        """Wake up the vehicle if its asleep."""
-        await wake_up_vehicle(self.vehicle)
 
 
 class TeslemetryEnergyLiveEntity(TeslemetryEntity):
@@ -230,7 +230,7 @@ class TeslemetryWallConnectorEntity(TeslemetryEntity):
         super().__init__(data.live_coordinator, key)
 
     @property
-    def _value(self) -> int:
+    def _value(self) -> StateType:
         """Return a specific wall connector value from coordinator data."""
         return (
             self.coordinator.data.get("wall_connectors", {})
@@ -249,11 +249,8 @@ class TeslemetryWallConnectorEntity(TeslemetryEntity):
 class TeslemetryVehicleStreamEntity(TeslemetryRootEntity):
     """Parent class for Teslemetry Vehicle Stream entities."""
 
-    def __init__(
-        self, data: TeslemetryVehicleData, key: str, streaming_key: Signal | None = None
-    ) -> None:
+    def __init__(self, data: TeslemetryVehicleData, key: str) -> None:
         """Initialize common aspects of a Teslemetry entity."""
-        self.streaming_key = streaming_key
         self.vehicle = data
 
         self.api = data.api
@@ -265,32 +262,7 @@ class TeslemetryVehicleStreamEntity(TeslemetryRootEntity):
         self._attr_unique_id = f"{data.vin}-{key}"
         self._attr_device_info = data.device
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
-        if self.streaming_key:
-            self.async_on_remove(
-                self.stream.async_add_listener(
-                    self._handle_stream_update,
-                    {"vin": self.vin, "data": {self.streaming_key: None}},
-                )
-            )
-            self.vehicle.config_entry.async_create_background_task(
-                self.hass,
-                self.add_field(self.streaming_key),
-                f"Adding field {self.streaming_key.value} to {self.vehicle.vin}",
-            )
-
-    def _handle_stream_update(self, data: dict[str, Any]) -> None:
-        """Handle updated data from the stream."""
-        self._async_value_from_stream(data["data"][self.streaming_key])
-        self.async_write_ha_state()
-
-    def _async_value_from_stream(self, value: Any) -> None:
-        """Update the entity with the latest value from the stream."""
-        raise NotImplementedError
-
-    @cached_property
+    @property
     def available(self) -> bool:
         """Return True if entity is available."""
         return self.stream.connected

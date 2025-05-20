@@ -194,13 +194,7 @@ CAPABILITY_TO_SENSORS: dict[
                 native_unit_of_measurement=PERCENTAGE,
                 deprecated=(
                     lambda status: "media_player"
-                    if all(
-                        capability in status
-                        for capability in (
-                            Capability.AUDIO_MUTE,
-                            Capability.MEDIA_PLAYBACK,
-                        )
-                    )
+                    if Capability.AUDIO_MUTE in status
                     else None
                 ),
             )
@@ -590,7 +584,7 @@ CAPABILITY_TO_SENSORS: dict[
                 device_class=SensorDeviceClass.TEMPERATURE,
                 use_temperature_unit=True,
                 # Set the value to None if it is 0 F (-17 C)
-                value_fn=lambda value: None if value in {0, -17} else value,
+                value_fn=lambda value: None if value in {-17, 0, 1} else value,
             )
         ]
     },
@@ -637,7 +631,7 @@ CAPABILITY_TO_SENSORS: dict[
             SmartThingsSensorEntityDescription(
                 key="powerEnergy_meter",
                 translation_key="power_energy",
-                state_class=SensorStateClass.TOTAL_INCREASING,
+                state_class=SensorStateClass.TOTAL,
                 device_class=SensorDeviceClass.ENERGY,
                 native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
                 value_fn=lambda value: value["powerEnergy"] / 1000,
@@ -995,6 +989,18 @@ CAPABILITY_TO_SENSORS: dict[
                 value_fn=dt_util.parse_datetime,
             )
         ],
+    },
+    Capability.SAMSUNG_CE_WATER_CONSUMPTION_REPORT: {
+        Attribute.WATER_CONSUMPTION: [
+            SmartThingsSensorEntityDescription(
+                key=Attribute.WATER_CONSUMPTION,
+                translation_key="water_consumption",
+                state_class=SensorStateClass.TOTAL_INCREASING,
+                device_class=SensorDeviceClass.WATER,
+                native_unit_of_measurement=UnitOfVolume.LITERS,
+                value_fn=lambda value: value["cumulativeAmount"] / 1000,
+            )
+        ]
     },
 }
 

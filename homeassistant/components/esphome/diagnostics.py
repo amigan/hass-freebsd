@@ -9,10 +9,18 @@ from homeassistant.const import CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 
 from . import CONF_NOISE_PSK
+from .const import CONF_DEVICE_NAME
 from .dashboard import async_get_dashboard
 from .entry_data import ESPHomeConfigEntry
 
 REDACT_KEYS = {CONF_NOISE_PSK, CONF_PASSWORD, "mac_address", "bluetooth_mac_address"}
+CONFIGURED_DEVICE_KEYS = (
+    "configuration",
+    "current_version",
+    "deployed_version",
+    "loaded_integrations",
+    "target_platform",
+)
 
 
 async def async_get_config_entry_diagnostics(
@@ -25,11 +33,24 @@ async def async_get_config_entry_diagnostics(
 
     entry_data = config_entry.runtime_data
     device_info = entry_data.device_info
+    device_name: str | None = (
+        device_info.name if device_info else config_entry.data.get(CONF_DEVICE_NAME)
+    )
 
     if (storage_data := await entry_data.store.async_load()) is not None:
         diag["storage_data"] = storage_data
 
     if dashboard := async_get_dashboard(hass):
-        diag["dashboard"] = dashboard.addon_slug
+        diag_dashboard["configured"] = True
+        diag_dashboard["supports_update"] = dashboard.supports_update
+        diag_dashboard["last_update_success"] = dashboard.last_update_success
+        diag_dashboard["last_exception"] = dashboard.last_exception
+        diag_dashboard["addon"] = dashboard.addon_slug
+        if device_name and dashboard.data:
+            diag_dashboard["has_matching_name"] = device_name in dashboard.data
+            if data := dashboard.data.get(device_name):
+                diag_dashboard["device"] = {
+                    key: data.get(key) for key in CONFIGURED_DEVICE_KEYS
+                }
 
     return async_redact_data(diag, REDACT_KEYS)
