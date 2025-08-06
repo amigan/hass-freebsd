@@ -81,7 +81,7 @@ PyQRCode==1.2.1
 PyRMVtransport==0.3.3
 
 # homeassistant.components.switchbot
-PySwitchbot==0.68.1
+PySwitchbot==0.68.2
 
 # homeassistant.components.syncthru
 PySyncThru==0.8.0
@@ -173,7 +173,7 @@ aioairzone-cloud==0.6.12
 aioairzone==1.0.0
 
 # homeassistant.components.alexa_devices
-aioamazondevices==3.2.10
+aioamazondevices==3.5.1
 
 # homeassistant.components.ambient_network
 # homeassistant.components.ambient_station
@@ -491,7 +491,7 @@ arcam-fmj==1.8.1
 # homeassistant.components.ssdp
 # homeassistant.components.upnp
 # homeassistant.components.yeelight
-async-upnp-client==0.44.0
+async-upnp-client==0.45.0
 
 # homeassistant.components.arve
 asyncarve==0.1.1
@@ -890,7 +890,7 @@ georss-qld-bushfire-alert-client==0.8
 getmac==0.9.5
 
 # homeassistant.components.gios
-gios==6.1.0
+gios==6.1.2
 
 # homeassistant.components.glances
 glances-api==0.8.0
@@ -982,7 +982,7 @@ ha-philipsjs==3.2.2
 ha-silabs-firmware-client==0.2.0
 
 # homeassistant.components.habitica
-habiticalib==0.4.0
+habiticalib==0.4.1
 
 # homeassistant.components.bluetooth
 habluetooth==3.49.0
@@ -1017,13 +1017,13 @@ hole==0.8.0
 holidays==0.75
 
 # homeassistant.components.frontend
-home-assistant-frontend==20250702.2
+home-assistant-frontend==20250702.3
 
 # homeassistant.components.conversation
 home-assistant-intents==2025.6.23
 
 # homeassistant.components.homematicip_cloud
-homematicip==2.0.6
+homematicip==2.0.7
 
 # homeassistant.components.remember_the_milk
 httplib2==0.20.4
@@ -1634,7 +1634,7 @@ pyeiscp==0.0.7
 pyemoncms==0.1.1
 
 # homeassistant.components.enphase_envoy
-pyenphase==2.2.1
+pyenphase==2.2.2
 
 # homeassistant.components.everlights
 pyeverlights==0.1.0
@@ -1918,7 +1918,7 @@ pyrympro==0.0.9
 pysabnzbd==1.1.1
 
 # homeassistant.components.schlage
-pyschlage==2025.4.0
+pyschlage==2025.7.2
 
 # homeassistant.components.sensibo
 pysensibo==1.2.1
@@ -1948,7 +1948,7 @@ pysmappee==0.2.29
 pysmarlaapi==0.9.0
 
 # homeassistant.components.smartthings
-pysmartthings==3.2.7
+pysmartthings==3.2.8
 
 # homeassistant.components.smarty
 pysmarty2==0.10.2
@@ -1984,7 +1984,7 @@ pysqueezebox==0.12.1
 pystiebeleltron==0.1.0
 
 # homeassistant.components.suez_water
-pysuezV2==2.0.5
+pysuezV2==2.0.7
 
 # homeassistant.components.switchbee
 pyswitchbee==1.8.3
@@ -2151,7 +2151,7 @@ pywilight==0.0.74
 pywizlight==0.6.3
 
 # homeassistant.components.wmspro
-pywmspro==0.3.0
+pywmspro==0.3.2
 
 # homeassistant.components.ws66i
 pyws66i==1.1
@@ -2387,7 +2387,7 @@ temperusb==1.6.1
 # homeassistant.components.tesla_fleet
 # homeassistant.components.teslemetry
 # homeassistant.components.tessie
-tesla-fleet-api==1.2.0
+tesla-fleet-api==1.2.2
 
 # homeassistant.components.powerwall
 tesla-powerwall==0.5.2
