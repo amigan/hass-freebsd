@@ -53,7 +53,7 @@ from .entity import (
     ShellyRpcAttributeEntity,
     ShellySleepingBlockAttributeEntity,
     ShellySleepingRpcAttributeEntity,
-    async_setup_entry_attribute_entities,
+    async_setup_entry_block,
     async_setup_entry_rest,
     async_setup_entry_rpc,
     get_entity_rpc_device_info,
@@ -198,7 +198,7 @@ class RpcBluTrvSensor(RpcSensor):
         )
 
 
-SENSORS: dict[tuple[str, str], BlockSensorDescription] = {
+BLOCK_SENSORS: dict[tuple[str, str], BlockSensorDescription] = {
     ("device", "battery"): BlockSensorDescription(
         key="device|battery",
         native_unit_of_measurement=PERCENTAGE,
@@ -1283,6 +1283,7 @@ RPC_SENSORS: Final = {
         key="voltmeter",
         sub_key="xvoltage",
         translation_key="voltmeter_value",
+        state_class=SensorStateClass.MEASUREMENT,
         removal_condition=lambda _, status, key: (status[key].get("xvoltage") is None),
         unit=lambda config: config["xvoltage"]["unit"] or None,
     ),
@@ -1300,6 +1301,7 @@ RPC_SENSORS: Final = {
         key="input",
         sub_key="xpercent",
         translation_key="analog_value",
+        state_class=SensorStateClass.MEASUREMENT,
         removal_condition=lambda config, status, key: (
             config[key]["type"] != "analog"
             or config[key]["enable"] is False
@@ -1344,6 +1346,7 @@ RPC_SENSORS: Final = {
         key="input",
         sub_key="xfreq",
         translation_key="pulse_counter_frequency_value",
+        state_class=SensorStateClass.MEASUREMENT,
         removal_condition=lambda config, status, key: (
             config[key]["type"] != "count"
             or config[key]["enable"] is False
@@ -1734,19 +1737,19 @@ def _async_setup_block_entry(
 ) -> None:
     """Set up entities for BLOCK device."""
     if config_entry.data[CONF_SLEEP_PERIOD]:
-        async_setup_entry_attribute_entities(
+        async_setup_entry_block(
             hass,
             config_entry,
             async_add_entities,
-            SENSORS,
+            BLOCK_SENSORS,
             BlockSleepingSensor,
         )
     else:
-        async_setup_entry_attribute_entities(
+        async_setup_entry_block(
             hass,
             config_entry,
             async_add_entities,
-            SENSORS,
+            BLOCK_SENSORS,
             BlockSensor,
         )
         async_setup_entry_rest(
