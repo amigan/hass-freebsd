@@ -179,5 +179,4 @@ class TransmissionDataUpdateCoordinator(DataUpdateCoordinator[SessionStats]):
         """Get the alternative speed flag."""
         if self._session is None:
             return None
-
         return self._session.alt_speed_enabled
