@@ -143,6 +143,29 @@ async def test_commands(
 
 
 @pytest.mark.parametrize(
+    "entity_id",
+    [
+        ENTITY_ID,
+        Q7_ENTITY_ID,
+        Q10_ENTITY_ID,
+    ],
+)
+async def test_set_fan_speed_invalid(
+    hass: HomeAssistant,
+    setup_entry: MockConfigEntry,
+    entity_id: str,
+) -> None:
+    """Test calling set_fan_speed with an invalid mode."""
+    with pytest.raises(ServiceValidationError, match="Invalid fan speed: some-mode"):
+        await hass.services.async_call(
+            VACUUM_DOMAIN,
+            SERVICE_SET_FAN_SPEED,
+            {ATTR_ENTITY_ID: entity_id, "fan_speed": "some-mode"},
+            blocking=True,
+        )
+
+
+@pytest.mark.parametrize(
     ("in_cleaning_int", "in_returning_int", "expected_command"),
     [
         (0, 1, RoborockCommand.APP_CHARGE),
@@ -880,25 +903,6 @@ async def test_q10_set_fan_speed_command(
     assert q10_vacuum_api.vacuum.set_fan_level.call_args[0] == (YXFanLevel.QUIET,)
 
 
-async def test_q10_set_invalid_fan_speed(
-    hass: HomeAssistant,
-    setup_entry: MockConfigEntry,
-    q10_vacuum_api: Mock,
-) -> None:
-    """Test that setting an invalid fan speed raises an error."""
-    vacuum = hass.states.get(Q10_ENTITY_ID)
-    assert vacuum
-
-    with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
-            VACUUM_DOMAIN,
-            SERVICE_SET_FAN_SPEED,
-            {ATTR_ENTITY_ID: Q10_ENTITY_ID, "fan_speed": "invalid_speed"},
-            blocking=True,
-        )
-    assert q10_vacuum_api.vacuum.set_fan_level.call_count == 0
-
-
 @pytest.mark.parametrize(
     "command",
     [
@@ -1012,14 +1016,14 @@ async def test_q10_push_status_update(
     assert fake_q10_vacuum.b01_q10_properties is not None
     api = fake_q10_vacuum.b01_q10_properties
 
-    # Verify initial state is "docked" (from Q10_STATUS fixture: CHARGING_STATE)
+    # Verify initial state is "docked" (from Q10_STATUS fixture: CHARGING)
     vacuum = hass.states.get(Q10_ENTITY_ID)
     assert vacuum
     assert vacuum.state == "docked"
 
     # Simulate the device pushing a status change via DPS data
     # (e.g. user started cleaning from the Roborock app)
-    api.status.update_from_dps({B01_Q10_DP.STATUS: 5})  # CLEANING_STATE
+    api.status.update_from_dps({B01_Q10_DP.STATUS: 5})  # CLEANING
     await hass.async_block_till_done()
 
     # Verify the entity state updated to "cleaning"
@@ -1028,7 +1032,7 @@ async def test_q10_push_status_update(
     assert vacuum.state == "cleaning"
 
     # Simulate returning to dock
-    api.status.update_from_dps({B01_Q10_DP.STATUS: 6})  # TO_CHARGE_STATE
+    api.status.update_from_dps({B01_Q10_DP.STATUS: 6})  # RETURNING_HOME
     await hass.async_block_till_done()
 
     vacuum = hass.states.get(Q10_ENTITY_ID)
