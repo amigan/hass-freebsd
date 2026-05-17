@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.bluetooth import async_scanner_by_source
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.core import HomeAssistant
@@ -41,23 +40,6 @@ async def async_get_config_entry_diagnostics(
     if (storage_data := await entry_data.store.async_load()) is not None:
         diag["storage_data"] = storage_data
 
-    if (
-        device_info
-        and (
-            scanner_mac := device_info.bluetooth_mac_address or device_info.mac_address
-        )
-        and (scanner := async_scanner_by_source(hass, scanner_mac.upper()))
-        and (bluetooth_device := entry_data.bluetooth_device)
-    ):
-        diag["bluetooth"] = {
-            "connections_free": bluetooth_device.ble_connections_free,
-            "connections_limit": bluetooth_device.ble_connections_limit,
-            "available": bluetooth_device.available,
-            "scanner": await scanner.async_diagnostics(),
-        }
-
-    diag_dashboard: dict[str, Any] = {"configured": False}
-    diag["dashboard"] = diag_dashboard
     if dashboard := async_get_dashboard(hass):
         diag_dashboard["configured"] = True
         diag_dashboard["supports_update"] = dashboard.supports_update
