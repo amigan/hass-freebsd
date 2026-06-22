@@ -1,7 +1,5 @@
 """Platform for Miele fan entity."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 import logging
 import math
@@ -137,6 +135,8 @@ class MieleFan(MieleEntity, FanEntity):
         _LOGGER.debug("Calc ventilation_step: %s", ventilation_step)
         if ventilation_step == 0:
             await self.async_turn_off()
+        elif ventilation_step == self.device.state_ventilation_step:
+            return
         else:
             try:
                 await self.api.send_action(
@@ -167,12 +167,12 @@ class MieleFan(MieleEntity, FanEntity):
         try:
             await self.api.send_action(self._device_id, {POWER_ON: True})
         except ClientResponseError as ex:
+            # pylint: disable-next=home-assistant-exception-placeholder-mismatch
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={
                     "entity": self.entity_id,
-                    "err_status": str(ex.status),
                 },
             ) from ex
 
@@ -185,12 +185,12 @@ class MieleFan(MieleEntity, FanEntity):
         try:
             await self.api.send_action(self._device_id, {POWER_OFF: True})
         except ClientResponseError as ex:
+            # pylint: disable-next=home-assistant-exception-placeholder-mismatch
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={
                     "entity": self.entity_id,
-                    "err_status": str(ex.status),
                 },
             ) from ex
 

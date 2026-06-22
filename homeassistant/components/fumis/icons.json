@@ -2,7 +2,7 @@
   "entity": {
     "button": {
       "sync_clock": {
-        "default": "mdi:clock-sync"
+        "default": "mdi:clock-check"
       }
     },
     "number": {
@@ -98,6 +98,14 @@
       },
       "wifi_signal_strength": {
         "default": "mdi:wifi"
+      }
+    },
+    "switch": {
+      "eco_mode": {
+        "default": "mdi:leaf"
+      },
+      "timer": {
+        "default": "mdi:timer"
       }
     }
   }
