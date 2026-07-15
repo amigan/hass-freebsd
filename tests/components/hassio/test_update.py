@@ -134,7 +134,7 @@ async def test_update_entities(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -156,7 +156,7 @@ async def test_update_addon(hass: HomeAssistant, update_addon: AsyncMock) -> Non
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -185,7 +185,7 @@ async def test_update_addon_progress(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -275,7 +275,7 @@ async def test_addon_update_progress_startup(
                 stage=None,
                 done=False,
                 errors=[],
-                created=datetime.now(),
+                created=datetime.now(),  # pylint: disable=home-assistant-enforce-naive-now
                 child_jobs=[],
                 extra={"total": 1234567890},
             )
@@ -288,7 +288,7 @@ async def test_addon_update_progress_startup(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -385,7 +385,7 @@ async def test_update_addon_with_backup(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -479,7 +479,7 @@ async def test_update_addon_with_backup_removes_old_backups(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -523,7 +523,9 @@ async def test_update_addon_with_backup_removes_old_backups(
     update_addon.assert_called_once_with("test", StoreAddonUpdate(backup=False))
 
 
-async def test_update_os(hass: HomeAssistant, supervisor_client: AsyncMock) -> None:
+async def test_update_os(
+    hass: HomeAssistant, supervisor_client: AsyncMock, os_info: AsyncMock
+) -> None:
     """Test updating OS update entity."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
     config_entry.add_to_hass(hass)
@@ -531,13 +533,21 @@ async def test_update_os(hass: HomeAssistant, supervisor_client: AsyncMock) -> N
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
     await hass.async_block_till_done()
 
-    supervisor_client.os.update.return_value = None
+    async def mock_os_update(*args: Any) -> None:
+        """Simulate Supervisor reporting the new version after the update."""
+        os_info.return_value = replace(
+            os_info.return_value,
+            version="1.0.0dev2222",
+            update_available=False,
+        )
+
+    supervisor_client.os.update.side_effect = mock_os_update
     with patch(
         "homeassistant.components.backup.manager.BackupManager.async_create_backup",
     ) as mock_create_backup:
@@ -549,6 +559,13 @@ async def test_update_os(hass: HomeAssistant, supervisor_client: AsyncMock) -> N
         )
     mock_create_backup.assert_not_called()
     supervisor_client.os.update.assert_called_once_with(OSUpdate(version=None))
+
+    # The coordinator is refreshed after install so the new version
+    # shows up immediately
+    state = hass.states.get("update.home_assistant_operating_system_update")
+    assert state is not None
+    assert state.state == "off"
+    assert state.attributes["installed_version"] == "1.0.0dev2222"
 
 
 @pytest.mark.parametrize(
@@ -627,7 +644,7 @@ async def test_update_os_with_backup(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -665,7 +682,7 @@ async def test_update_core(hass: HomeAssistant, supervisor_client: AsyncMock) ->
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -697,7 +714,7 @@ async def test_update_core_progress(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -834,7 +851,7 @@ async def test_core_update_progress_startup(
                 stage=None,
                 done=False,
                 errors=[],
-                created=datetime.now(),
+                created=datetime.now(),  # pylint: disable=home-assistant-enforce-naive-now
                 child_jobs=[],
                 extra={"total": 1234567890},
             )
@@ -847,7 +864,7 @@ async def test_core_update_progress_startup(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -943,7 +960,7 @@ async def test_update_core_with_backup(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -982,7 +999,7 @@ async def test_update_core_sets_progress_immediately(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1026,7 +1043,7 @@ async def test_update_core_resets_progress_on_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1065,7 +1082,7 @@ async def test_update_addon_sets_progress_immediately(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1112,7 +1129,7 @@ async def test_update_addon_resets_progress_on_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1239,7 +1256,7 @@ async def test_update_addon_stays_in_progress_until_refresh(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1314,7 +1331,7 @@ async def test_update_addon_completes_on_any_version_change(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1345,7 +1362,7 @@ async def test_update_supervisor(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1379,7 +1396,7 @@ async def test_update_supervisor_progress(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1481,7 +1498,7 @@ async def test_update_supervisor_stays_in_progress_until_restart(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1547,7 +1564,7 @@ async def test_update_supervisor_completes_on_any_version_change(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1601,7 +1618,7 @@ async def test_update_addon_with_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1637,7 +1654,7 @@ async def test_update_addon_with_backup_and_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1674,7 +1691,7 @@ async def test_update_os_with_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1702,7 +1719,7 @@ async def test_update_os_with_backup_and_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1738,7 +1755,7 @@ async def test_update_supervisor_with_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1765,7 +1782,7 @@ async def test_update_core_with_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         assert await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
     await hass.async_block_till_done()
@@ -1793,7 +1810,7 @@ async def test_update_core_with_backup_and_error(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1830,7 +1847,7 @@ async def test_release_notes_between_versions(
     ):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1866,7 +1883,7 @@ async def test_release_notes_full(
     ):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1912,7 +1929,7 @@ async def test_not_release_notes(
     ):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1942,7 +1959,7 @@ async def test_no_os_entity(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         assert result
@@ -1966,7 +1983,7 @@ async def test_setting_up_core_update_when_addon_fails(
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
             hass,
-            "hassio",
+            DOMAIN,
             {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
         )
         await hass.async_block_till_done()
