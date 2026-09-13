@@ -1,5 +1,6 @@
 """The tests for the notify smtp platform."""
 
+import gzip
 from pathlib import Path
 import re
 from smtplib import (
@@ -17,6 +18,7 @@ from syrupy.assertion import SnapshotAssertion
 
 from homeassistant.components import camera, image, media_source
 from homeassistant.components.notify import (
+    ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TARGET,
     DOMAIN as NOTIFY_DOMAIN,
@@ -28,24 +30,12 @@ from homeassistant.components.smtp.const import (
     ATTR_FILENAME,
     ATTR_HTML,
     ATTR_MEDIA_SOURCE,
-    CONF_ENCRYPTION,
-    CONF_SENDER_NAME,
-    CONF_SERVER,
+    CONF_ENTRY,
     DOMAIN,
 )
 from homeassistant.components.smtp.notify import MailNotificationService
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    CONF_PASSWORD,
-    CONF_PORT,
-    CONF_RECIPIENT,
-    CONF_SENDER,
-    CONF_TIMEOUT,
-    CONF_USERNAME,
-    CONF_VERIFY_SSL,
-    STATE_UNKNOWN,
-)
+from homeassistant.const import ATTR_ENTITY_ID, CONF_NAME, CONF_RECIPIENT, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er, issue_registry as ir
@@ -64,20 +54,15 @@ class MockSMTP(MailNotificationService):
 
 
 @pytest.fixture
-def message():
+def message(
+    config_entry: MockConfigEntry,
+):
     """Return MockSMTP object with test data."""
     return MockSMTP(
         config={
-            CONF_SERVER: "localhost",
-            CONF_PORT: 25,
-            CONF_TIMEOUT: 5,
-            CONF_SENDER: "test@test.com",
-            CONF_ENCRYPTION: 1,
-            CONF_USERNAME: "testuser",
-            CONF_PASSWORD: "testpass",
+            CONF_NAME: config_entry.title,
+            CONF_ENTRY: config_entry,
             CONF_RECIPIENT: ["recip1@example.com", "testrecip@test.com"],
-            CONF_SENDER_NAME: "Home Assistant",
-            CONF_VERIFY_SSL: True,
         },
         ssl_context=create_client_context(),
     )
@@ -188,7 +173,7 @@ def test_send_text_message(hass: HomeAssistant, message) -> None:
         "Content-Transfer-Encoding: 7bit\n"
         "Subject: Home Assistant\n"
         "To: recip1@example.com,testrecip@test.com\n"
-        "From: Home Assistant <test@test.com>\n"
+        "From: Home Assistant <email@example.com>\n"
         "X-Mailer: Home Assistant\n"
         "Date: [^\n]+\n"
         "Message-Id: <[^@]+@[^>]+>\n"
@@ -554,12 +539,19 @@ async def test_smtp_send_message_image_source(
                         },
                         ATTR_FILENAME: "test.png",
                         ATTR_CONTENT_ID: "1312",
-                    }
+                    },
+                    {
+                        ATTR_MEDIA_SOURCE: {
+                            "media_content_id": "media-source://image/image.test",
+                            "media_content_type": "image/png",
+                        },
+                        ATTR_FILENAME: "attachment.png",
+                    },
                 ],
             },
             blocking=True,
         )
-    mock_get_image.assert_called_once_with(hass, "image.test")
+    mock_get_image.assert_called_with(hass, "image.test")
     assert smtp.sendmail.call_args[0][0] == "email@example.com"
     assert smtp.sendmail.call_args[0][1] == "recipient@example.com"
     assert smtp.sendmail.call_args[0][2] == snapshot
@@ -590,7 +582,7 @@ async def test_smtp_send_message_tts_source(
             {
                 ATTR_ENTITY_ID: "notify.home_assistant_recipient",
                 ATTR_MESSAGE: "Hello World",
-                ATTR_HTML: """<html><body><img src="cid:1312"></body></html>""",
+                ATTR_HTML: """<html><body>Hello World</body></html>""",
                 ATTR_ATTACHMENTS: [
                     {
                         ATTR_MEDIA_SOURCE: {
@@ -731,3 +723,69 @@ async def test_deprecated_legacy_notify_action(
     assert issue_registry.async_get_issue(
         domain=DOMAIN, issue_id="deprecated_notify_action_home_assistant"
     )
+
+
+@pytest.mark.parametrize(
+    ("file_name", "file_bytes", "expected", "not_expected"),
+    [
+        (
+            "doorphone.jpg",
+            bytes.fromhex("ffd8fffe0010")
+            + b"Lavc62.28.102\x00"
+            + bytes.fromhex("ffdb"),
+            "Content-Type: image/jpeg",
+            "application/octet-stream",
+        ),
+        (
+            "diagram.svgz",
+            gzip.compress(b"<svg xmlns='http://www.w3.org/2000/svg'/>"),
+            "application/octet-stream",
+            "Content-Type: image/",
+        ),
+    ],
+    ids=[
+        "Verify a JPEG the stdlib cannot sniff is attached as an image.",
+        "Verify a compressed image is attached as a file.",
+    ],
+)
+@pytest.mark.usefixtures("aiosmtplib")
+async def test_legacy_notify_image_attachment(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    smtp: MagicMock,
+    tmp_path: Path,
+    file_name: str,
+    file_bytes: bytes,
+    expected: str,
+    not_expected: str,
+) -> None:
+    """Test the MIME type images are attached with.
+
+    JPEGs written by ffmpeg for camera.snapshot start with an SOI + COM marker
+    instead of JFIF/Exif, which MIMEImage does not recognize, so the file name
+    decides the type. Compressed images stay on the file attachment path.
+    """
+
+    image_file = tmp_path / file_name
+    image_file.write_bytes(file_bytes)
+    hass.config.allowlist_external_dirs.add(tmp_path)
+
+    config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.LOADED
+
+    await hass.services.async_call(
+        NOTIFY_DOMAIN,
+        "home_assistant",
+        {
+            ATTR_MESSAGE: "Test msg",
+            ATTR_DATA: {"images": [str(image_file)]},
+        },
+        blocking=True,
+    )
+
+    sent_message = smtp.sendmail.call_args[0][2]
+    assert expected in sent_message
+    assert not_expected not in sent_message

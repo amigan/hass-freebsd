@@ -117,8 +117,15 @@ async def validate_input(
     except vol.Invalid as error:
         raise InvalidUrl from error
     try:
-        async with mcp_client(hass, url, token_manager=token_manager) as session:
-            response = await session.initialize()
+        async with mcp_client(hass, url, token_manager=token_manager) as (
+            _session,
+            response,
+        ):
+            if not response.capabilities.tools:
+                raise MissingCapabilities(
+                    f"MCP Server {url} does not support 'Tools' capability"
+                )
+            return {"title": response.serverInfo.name}
     except httpx.TimeoutException as error:
         _LOGGER.info("Timeout connecting to MCP server: %s", error)
         raise TimeoutConnectError from error
@@ -131,13 +138,6 @@ async def validate_input(
     except httpx.HTTPError as error:
         _LOGGER.info("Cannot connect to MCP server: %s", error)
         raise CannotConnect from error
-
-    if not response.capabilities.tools:
-        raise MissingCapabilities(
-            f"MCP Server {url} does not support 'Tools' capability"
-        )
-
-    return {"title": response.serverInfo.name}
 
 
 class ModelContextProtocolConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
@@ -260,7 +260,11 @@ class ModelContextProtocolConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
     @override
     def extra_authorize_data(self) -> dict:
         """Extra data that needs to be appended to the authorize url."""
-        data = {}
+        data = {
+            # Add params to ensure we get back a refresh token
+            "access_type": "offline",
+            "prompt": "consent",
+        }
         if self.data and (scopes := self.data[CONF_SCOPE]) is not None:
             data[CONF_SCOPE] = " ".join(scopes)
         data.update(super().extra_authorize_data)
